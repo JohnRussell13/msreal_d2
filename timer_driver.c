@@ -139,6 +139,8 @@ static void setup_and_start_timer(unsigned int milliseconds)
 	unsigned int data = 0;
 	timer_load = zero - milliseconds*100000*1000;
 
+	// | XIL_AXI_TIMER_CSR_CASC_MASK
+
 	// Disable timer/counter while configuration is in progress
 	data = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
 	iowrite32(data & ~(XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK),
@@ -157,12 +159,12 @@ static void setup_and_start_timer(unsigned int milliseconds)
 			tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
 
 	// Enable interrupts and autoreload, rest should be zero
-	iowrite32(XIL_AXI_TIMER_CSR_ENABLE_INT_MASK | XIL_AXI_TIMER_CSR_AUTO_RELOAD_MASK | XIL_AXI_TIMER_CSR_CASC_MASK,
+	iowrite32(XIL_AXI_TIMER_CSR_ENABLE_INT_MASK | XIL_AXI_TIMER_CSR_AUTO_RELOAD_MASK,
 			tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
 
 	// Start Timer bz setting enable signal
 	data = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
-	iowrite32(data | XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK,
+	iowrite32(data | XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK | XIL_AXI_TIMER_CSR_CASC_MASK,
 			tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
 
 }
