@@ -58,8 +58,8 @@ static struct device *my_device;
 static struct cdev *my_cdev;
 static struct timer_info *tp = NULL;
 
-static int number = 1;
-
+static int number = 0;
+unsigned char state = 0;
 
 static irqreturn_t xilaxitimer_isr(int irq,void*dev_id);
 static void setup_and_start_timer(unsigned int milliseconds);
@@ -120,6 +120,7 @@ static irqreturn_t xilaxitimer_isr(int irq,void*dev_id)
 	// Disable Timer after i_num interrupts
 	if (number <= 0)
 	{
+		state = 0;
 		printk(KERN_NOTICE "xilaxitimer_isr: All of the interrupts have occurred. Disabling timer\n");
 		data = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
 		iowrite32(data & ~(XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK), tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
@@ -293,34 +294,85 @@ ssize_t timer_read(struct file *pfile, char __user *buffer, size_t length, loff_
 ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length, loff_t *offset) 
 {
 	char buff[BUFF_SIZE];
+	char buff2[BUFF_SIZE];
 	int second = 0;
 	int minute = 0;
 	int hour = 0;
 	int day = 0;
 	int ret = 0;
+	unsigned int data = 0;
 	ret = copy_from_user(buff, buffer, length);
 	if(ret)
 		return -EFAULT;
 	buff[length] = '\0';
-
-	ret = sscanf(buff,"%d:%d:%d:%d",&day,&hour,&minute,&second);
-	if(ret == 4)//two parameters parsed in sscanf
-	{
-		number = (((day*24+hour)*60+minute)*60+second);
-		if (number > 40000*1000)
+	strcpy(buff2,buff);
+	buff2[length-1] = 0; 
+	if(strcmp(buff2,"stop") == 0){	
+		if(state && number){
+			printk(KERN_NOTICE "xilaxitimer_write: Disabling timer\n");
+			data = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
+			iowrite32(data & ~(XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK), tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
+			state = 0;
+		}
+		else{
+			printk(KERN_NOTICE "xilaxtimer_write: Timer can't be stopped\n");
+		}
+	}
+	else if(strcmp(buff2,"start") ==  0){
+		if(!state &&  number){
+			// Disable timer/counter while configuration is in progress
+			/*data = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
+			iowrite32(data & ~(XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK),
+					tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
+	
+			// Set initial value in load register
+			iowrite32(timer_load, tp->base_addr + XIL_AXI_TIMER_TLR_OFFSET);
+	
+			// Load initial value into counter from load register
+			data = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
+			iowrite32(data | XIL_AXI_TIMER_CSR_LOAD_MASK,
+					tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
+		
+			data = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
+			iowrite32(data & ~(XIL_AXI_TIMER_CSR_LOAD_MASK),
+					tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);*/
+		
+			// Enable interrupts and autoreload, rest should be zero
+			printk(KERN_NOTICE "xilaxitimer_write: Starting timer\n");
+			iowrite32(XIL_AXI_TIMER_CSR_ENABLE_INT_MASK | XIL_AXI_TIMER_CSR_AUTO_RELOAD_MASK,
+					tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
+		
+			// Start Timer bz setting enable signal
+			/*data = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
+			iowrite32(data | XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK,
+					tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);*/
+			state = 1;
+		}
+		else{
+			printk(KERN_NOTICE "xilaxtimer_writer: Timer can't be started!\n");
+		}
+	}
+	else{
+		ret = sscanf(buff,"%d:%d:%d:%d",&day,&hour,&minute,&second);
+		if(ret == 4)//two parameters parsed in sscanf
 		{
-			printk(KERN_WARNING "xilaxitimer_write: Maximum period exceeded, enter something less than 40000 \n");
+			number = (((day*24+hour)*60+minute)*60+second);
+			if (number > 40000*1000)
+			{
+				printk(KERN_WARNING "xilaxitimer_write: Maximum period exceeded, enter something less than 40000 \n");
+			}
+			else
+			{
+				state =  1;
+				printk(KERN_INFO "xilaxitimer_write: Starting timer for %d:%d:%d:%d\n",day,hour,minute,second);
+				setup_and_start_timer(1);
+			}
+	
 		}
 		else
 		{
-			printk(KERN_INFO "xilaxitimer_write: Starting timer for %d:%d:%d:%d\n",day,hour,minute,second);
-			setup_and_start_timer(1);
+			printk(KERN_WARNING "xilaxitimer_write: Wrong format, expected dd:hh:mm:ss\n");
 		}
-
-	}
-	else
-	{
-		printk(KERN_WARNING "xilaxitimer_write: Wrong format, expected n,t \n\t n-number of interrupts\n\t t-time in ms between interrupts\n");
 	}
 	return length;
 }
