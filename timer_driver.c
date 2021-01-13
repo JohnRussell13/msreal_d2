@@ -157,7 +157,7 @@ static void setup_and_start_timer(unsigned int milliseconds)
 			tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
 
 	// Enable interrupts and autoreload, rest should be zero
-	iowrite32(XIL_AXI_TIMER_CSR_ENABLE_INT_MASK | XIL_AXI_TIMER_CSR_AUTO_RELOAD_MASK,
+	iowrite32(XIL_AXI_TIMER_CSR_ENABLE_INT_MASK | XIL_AXI_TIMER_CSR_AUTO_RELOAD_MASK | XIL_AXI_TIMER_CSR_CASC_MASK,
 			tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
 
 	// Start Timer bz setting enable signal
