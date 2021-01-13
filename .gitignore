@@ -1,0 +1,11 @@
+
+Module.symvers
+modules.order
+timer_driver.ko
+timer_driver.mod.c
+timer_driver.mod.o
+timer_driver.o
+.timer_driver.ko.cmd
+.timer_driver.mod.o.cmd
+.timer_driver.o.cmd
+.tmp_versions/
