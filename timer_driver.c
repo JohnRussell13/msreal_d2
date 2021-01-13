@@ -343,9 +343,9 @@ ssize_t timer_write(struct file *pfile, const char __user *buffer, size_t length
 					tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
 		
 			// Start Timer bz setting enable signal
-			/*data = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
+			data = ioread32(tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
 			iowrite32(data | XIL_AXI_TIMER_CSR_ENABLE_TMR_MASK,
-					tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);*/
+					tp->base_addr + XIL_AXI_TIMER_TCSR_OFFSET);
 			state = 1;
 		}
 		else{
